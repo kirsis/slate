@@ -15,6 +15,11 @@ set :js_dir, 'javascripts'
 set :images_dir, 'images'
 set :fonts_dir, 'fonts'
 
+## Pdfmaker custom extension. Add if you want PDF generati
+require 'makepdf'
+
+activate :pdfmaker
+
 # Activate the syntax highlighter
 activate :syntax
 ready do

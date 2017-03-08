@@ -1,4 +1,5 @@
 ---
+layout: "pdf"
 title: Notakey Credential Provider for Windows
 
 search: true

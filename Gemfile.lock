@@ -87,6 +87,7 @@ GEM
     padrino-support (0.13.3.3)
       activesupport (>= 3.1)
     parallel (1.10.0)
+    pdfkit (0.8.2)
     public_suffix (2.0.5)
     rack (2.0.1)
     rb-fsevent (0.9.8)
@@ -115,8 +116,9 @@ DEPENDENCIES
   middleman-autoprefixer (~> 2.7.0)
   middleman-sprockets (~> 4.1.0)
   middleman-syntax (~> 3.0.0)
+  pdfkit
   redcarpet (~> 3.4.0)
   rouge (~> 2.0.5)
 
 BUNDLED WITH
-   1.14.3
+   1.14.5

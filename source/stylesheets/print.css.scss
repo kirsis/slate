@@ -21,7 +21,13 @@ under the License.
 
 $print-color: #999;
 $print-color-light: #ccc;
-$print-font-size: 12px;
+$print-font-size: 24px;
+
+img {
+  display: block;
+  margin:0 auto;
+  width:90% !important;
+}
 
 body {
   @extend %default-font;
@@ -37,7 +43,7 @@ body {
 }
 
 .content {
-  font-size: 12px;
+  font-size: 24px;
 
   pre, code {
     @extend %code-font;
@@ -130,7 +136,7 @@ body {
   aside:before {
     vertical-align: middle;
     padding-right: 0.5em;
-    font-size: 14px;
+    font-size: 36px;
   }
 
   aside.notice:before {
