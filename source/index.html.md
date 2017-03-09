@@ -24,6 +24,11 @@ NtkCp consists of 2 components:
 The credential provider provides a username and password input fields. The provided
 username is sent to the Notakey API, to request approval on the user's smartphone.
 
+<aside class="notice">
+The password is <em>never</em> sent remotely by the Notakey credential provider. It is
+forwarded to the underlying system.
+</aside>
+
 If the username is not found (i.e. the user does not exist or has not been
 onboarded on the Notakey server), the login attempt will fail with a message.
 
@@ -161,6 +166,14 @@ Double-check network connectivity, and if the Notakey server can be reached.
 This is a generic error message for unexpected issues.
 
 # FAQ
+
+## Does NtkCp send the locally entered password to a remote server?
+
+No, only the username is sent to the Notakey API.
+
+## Does NtkCp perform any username transormations, before sending it to the Notakey API?
+
+No, the username is sent as-is.
 
 ## Does NtkCp work with local users or domain users?
 
