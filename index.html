@@ -241,6 +241,11 @@ and with a Notakey API endpoint.</li>
 <p>The credential provider provides a username and password input fields. The provided
 username is sent to the Notakey API, to request approval on the user&rsquo;s smartphone.</p>
 
+<aside class="notice">
+The password is <em>never</em> sent remotely by the Notakey credential provider. It is
+forwarded to the underlying system.
+</aside>
+
 <p>If the username is not found (i.e. the user does not exist or has not been
 onboarded on the Notakey server), the login attempt will fail with a message.</p>
 
@@ -374,6 +379,14 @@ but not anymore.</p>
 <p>This is a generic error message for unexpected issues.</p>
 
 <h1 id="faq">FAQ</h1>
+
+<h2 id="does-ntkcp-send-the-locally-entered-password-to-a-remote-server">Does NtkCp send the locally entered password to a remote server?</h2>
+
+<p>No, only the username is sent to the Notakey API.</p>
+
+<h2 id="does-ntkcp-perform-any-username-transormations-before-sending-it-to-the-notakey-api">Does NtkCp perform any username transormations, before sending it to the Notakey API?</h2>
+
+<p>No, the username is sent as-is.</p>
 
 <h2 id="does-ntkcp-work-with-local-users-or-domain-users">Does NtkCp work with local users or domain users?</h2>
 
