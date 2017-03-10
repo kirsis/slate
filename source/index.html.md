@@ -9,7 +9,7 @@ search: true
 
 # Introduction
 
-Notakey Authentication Proxy (NtkP) is a proxy server that allows injecting Notakey-based
+Notakey Authentication Proxy (NtkP) is a proxy server that allows transparently adding Notakey-based
 2-factor authentication in existing systems, which are using standard authentication protocols.
 
 Currently, NtkP supports RADIUS with PAP and CHAP authentication types.
@@ -37,6 +37,8 @@ While waiting for the user to respond on their smartphone, upstream clients may
 time out, and re-send the Access-Request message. In this case, the proxy will
 attempt to handle duplicate requests, based on packet ID values and corresponding
 usernames.
+
+## Flowchart
 
 ![Overview Flowchart](images/proxy_flow.png "Overview Flowchart")
 
@@ -109,12 +111,18 @@ Parameters to the Docker image are set via environment variables.
 
 # Network Connectivity
 
-The background service will attempt to connect to its specified Notakey endpoint.
+NtkP will communicate with its RADIUS clients and the downstream RADIUS server
+via one UDP port. This port can be different for clients and the downstream server,
+but it can not be different for different clients.
 
-If the endpoint URL uses `https://`, then port `443` will be used. Otherwise,
-the port `80` will be used.
+Additionally, the TCP port 443 is required to be open between NtkP and the
+designated Notakey API endpoint.
 
-There are no expected inbound connections.
+![Network Connectivity Chart](images/network_connectivity.png "Network Connectivity Chart")
+
+<aside class="notice">
+See <a href="images/network_connectivity.png">enlarged version</a>.
+</aside>
 
 # Log files
 
