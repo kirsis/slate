@@ -1,95 +1,99 @@
 ---
-title: Notakey Credential Provider for Windows
-
+title: Notakey Authentication Proxy
+toc_footers:
+  - <a href="https://hub.docker.com/r/notakey/authproxy/">Authentication Proxy page at Docker Hub<span class="external"></span></a>
 search: true
 ---
 
-![Windows login screenshot](images/hero.png "Logon using RDP")
+![Notakey Authentication Proxy running in Terminal](images/hero.png "Notakey Authentication Proxy")
 
 # Introduction
 
-The Notakey Credential Provider (NtkCp) is a Windows plugin, which extends
-the logon UI with a new mechanism, which injects Notakey 2FA in the normal
-logon scenario.
+Notakey Authentication Proxy (NtkP) is a proxy server that allows injecting Notakey-based
+2-factor authentication in existing systems, which are using standard authentication protocols.
+
+Currently, NtkP supports RADIUS with PAP and CHAP authentication types.
 
 # Technical Summary
 
-NtkCp consists of 2 components:
+NtkP manages a list of known IP addresses, which can send it requests. Each IP address
+has a corresponding secret. Each of these IP addresses correspond to one upstream client.
 
-- a Windows COM component, which implements the [ICredentialProvider](https://msdn.microsoft.com/en-us/library/windows/desktop/bb776042\(v=vs.85\).aspx) and
-  [ICredentialProviderCredential2](https://msdn.microsoft.com/en-us/library/windows/desktop/hh706912\(v=vs.85\).aspx) interfaces.
-- a Windows service, which communicates with the credential provider via named pipes,
-  and with a Notakey API endpoint.
+NtkP also has one backing RADIUS server address and secret defined. This is the downstream RADIUS server.
 
-The credential provider provides a username and password input fields. The provided
-username is sent to the Notakey API, to request approval on the user's smartphone.
+When a RADIUS message is received, it will be transparently proxied to the downstream
+server. Each incoming message will be decoded with the matching upstream secret, and
+re-encoded with the downstream server's secret.
+
+Each message returned by the downstream server will be similarly decoded and re-encoded,
+to match the secret expected by the upstream client.
+
+In addition, if the RADIUS message is an `Access-Request` message, then
+the username contained in the message will be passed to Notakey API, and
+await verification. If the end-user denies this request on their smartphone, the response will be
+changed, before being returned to the upstream client.
+
+While waiting for the user to respond on their smartphone, upstream clients may
+time out, and re-send the Access-Request message. In this case, the proxy will
+attempt to handle duplicate requests, based on packet ID values and corresponding
+usernames.
+
+![Overview Flowchart](images/proxy_flow.png "Overview Flowchart")
 
 <aside class="notice">
-The password is <em>never</em> sent remotely by the Notakey credential provider. It is
-forwarded to the underlying system.
+See <a href="images/proxy_flow.png">enlarged version</a>.
 </aside>
 
-If the username is not found (i.e. the user does not exist or has not been
-onboarded on the Notakey server), the login attempt will fail with a message.
+# System Requirements
 
-If the username is found, and the attempt is denied, the logon attempt will fail with an error.
+## Docker
 
-If the user approves the logon attempt, then the provided username and password are processed as
-they would normally. If the entered password is incorrect, then the logon attempt will
-fail with a message.
+The recommended environment for NtkP is Docker, so any Docker-enabled host
+should be fine.
 
-# Installation instructions (*.zip)
+## Windows
+
+NtkP can alternatively be installed as a Windows system service. It has a dependency
+on .NET Framework v4.5.
+
+See: [Microsoft .NET Framework v4.5 system requirements](https://msdn.microsoft.com/en-us/library/8z6watww(v=vs.110).aspx).
+
+# Installation instructions (Docker)
+
+The recommended way to obtain NtkP is by using Docker. It is published as the
+`notakey/authproxy` image. Use the tag `latest` to always use the latest version,
+or specify a specific version, using the tag.
 
 ```shell
-# The expected ZIP package contents
-package.zip
-├── NotakeyBGService
-│   ├── winsw.exe
-│   ├── winsw.xml
-│   └── bin
-│       └── Release
-│           ├── *.dll
-│           ├── *.xml
-│           └── NotakeyBGService.exe
-├── NotakeyNETProvider
-│   └── bin
-│       └── x64
-│           └── Release
-│               ├── *.dll
-│               └── *.xml
-├── register.bat
-├── register.reg
-└── unregister.bat
+# Download the latest version
+$ docker pull notakey/authproxy:latest
+
+# Download a specific version
+$ docker pull notakey/authproxy:1.0.0
 ```
 
-Place the contents of the package in the desired location (e.g. `C:\ntkcp`)
-and then run `register.bat` as administrator.
+The link to the Docker Hub page: [Notakey Authentication Proxy on Docker Hub](https://hub.docker.com/r/notakey/authproxy/).
 
-This script will create a new system service (`Notakey BG Service`), and
-register the credential provider in the registry.
-
-To remove the provider from the system, run `unregister.bat` as the administrator.
+# Installation instructions (MSI)
 
 <aside class="notice">
-After running <code>register.bat</code>, be sure to make the service restart
-on failure. This will prevent the credential provider from becoming unusable, in
-case of an unexpected issue.
+The use of the MSI package is discouraged, in favor of the Docker version. The MSI
+package will continue to be supported, however.
 </aside>
 
-## 32-bit systems
+...
 
-On 32-bit systems, the package should contain a `register32.bat` and `unregister32.bat`
-file. These should be used to register the service and credential provider.
+# Configuration
 
-There are no other user-facing changes between 32-bit and 64-bit packages.
+## Configuring the MSI
 
-# Configuring the API endpoint
+...
 
-After installation, the background service must be configured to connect
-to the desired Notakey API endpoint.
+## Configuring the Docker image
 
-This is done by modifying the `NotakeyBGService\winsw.xml` file. This file should contain
-three argument tags:
+Parameters to the Docker image are set via environment variables.
+
+
 
 ```xml
 <argument>https://demo.notakey.com/api/</argument>
@@ -167,49 +171,32 @@ This is a generic error message for unexpected issues.
 
 # FAQ
 
-## Does NtkCp send the locally entered password to a remote server?
+## Does NtkP listen on only one port? Are accounting messages supported?
 
-No, only the username is sent to the Notakey API.
+NtkP only listens to one port, and it expects authentication messages to be sent
+on this port.
 
-## Does NtkCp perform any username transormations, before sending it to the Notakey API?
+Listening to accounting messages is not currently supported.
 
-No, the username is sent as-is.
+## What are the implications for only supporting PAP and CHAP authentication modes?
 
-## Does NtkCp work with local users or domain users?
+PAP and CHAP do not sufficiently protect user credentials from man-in-the-middle
+attacks.
 
-NtkCp works with both local and domain users. The entered username
-must match the username that has been onboarded in the Notakey Dashboard.
+These authentication types may be deemed secure-enough for use on an internal network,
+where the risk for a MitM attack can be mitigated with other means.
 
-## Can NtkCp be used in an environment that requires smartcard logon?
+<aside class="warning">
+You should <em>never</em> use PAP and CHAP in an uncontrolled environment.
+</aside>
 
-No, NtkCp is a proxy for the normal username/password logon method.
+## Why does NtkP support only PAP and CHAP?
 
-## Can't the users choose a different credential method, and sidestep Notakey authentication?
+PAP and CHAP are good enough for many use cases, so we have prioritized other tasks
+over implementing more authentication methods.
 
-If other credential providers are enabled, the users will be able to use them
-and sidestep Notakey authentication.
+Implementing more authentication methods is on our roadmap, however.
 
-To mitigate this, you can disable other credential providers.
-
-## Can users use safe mode to sidestep the Notakey credential provider?
-
-Yes, in safe mode, the Notakey credential provider can be avoided. The system
-will fallback to the default system credential providers.
-
-## Can this be used to protect remote servers?
-
-NtkCp can be used together with Remote Desktop Protocol (RDP).
-
-## Why is the Notakey logon option missing, when accessing a remote server via RDP?
-
-If Network Level Authentication (NLA) is enabled, users will be prompted locally
-for either their smartcard, or their username/password credentials.
-
-This is by design and can not be changed.
-
-However, if other credential providers are disabled on the remote server, then
-after the initial authentication, a second logon UI will be presented, where
-the user will be able to use the Notakey credential provider.
 
 
 
