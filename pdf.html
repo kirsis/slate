@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <meta name="date" content="2017-03-10T12:35:24EET">
-    <title>Notakey Credential Provider for Windows v.</title>
+    <meta name="date" content="2017-03-13T11:33:22EET">
+    <title>Notakey Authentication Proxy v.1.0</title>
     <meta name="pdfkit-footer_right" content="Page [page] of [topage]">
-    <meta name="pdfkit-footer_left" content="[title] | 2017-03-10">
+    <meta name="pdfkit-footer_left" content="[title] | 2017-03-13">
     <meta name="pdfkit-footer_font_size" content="8">
     <link href="stylesheets/print.css" rel="stylesheet" media="all" />
 
@@ -16,96 +16,122 @@
 <body class="pdf">
 
 <section class="titlePage">
-        <img src="images/logo.png" alt="Logo" />
+    <img src="images/hero_hand.png" class="heroHand" alt="Hero hand" />
 
-    <h1>Notakey Credential Provider for Windows</h1>
+    <div class="content">
+        <h1 class="title">Notakey Authentication Proxy</h1>
+        <h2 class="subtitle">Licensing Guide</h2>
+        <p class="serial">NTKUM-AP-10317</p>
+        <p class="date">2017-03-13</p>
+        <p class="version">Version  1.0</p>
+    </div>
 
     <footer>
-        <div>Version  </div>
-        <div>Date: 2017-03-10</div>
+        <p>
+            <strong>Headquarters</strong><br/>
+            Notakey Latvia SIA<br/>
+            Ganu iela 3 - 12, LV-1010, Riga, Latvia<br/>
+            <a href="https://www.notakey.com">https://www.notakey.com</a><br/>
+            Tel.: +371 20 208 714<br/>
+        </p>
+
+        <p><strong>Confidential</strong> - For Internal and Partner Use Only</p>
+        <p>&copy; 2017 Notakey Latvia SIA. All Rights Reserved.</p>
     </footer>
 </section>
+
 <section class="content">
-    <p><img src="images/hero.png" title="Logon using RDP" alt="Windows login screenshot" /></p>
+    <p><img src="images/hero.png" title="Notakey Authentication Proxy" alt="Notakey Authentication Proxy running in Terminal" /></p>
 
 <h1 id="introduction">Introduction</h1>
 
-<p>The Notakey Credential Provider (NtkCp) is a Windows plugin, which extends
-the logon UI with a new mechanism, which injects Notakey 2FA in the normal
-logon scenario.</p>
+<p>Notakey Authentication Proxy (NtkP) is a proxy server that allows transparently adding Notakey-based
+2-factor authentication in existing systems, which are using standard authentication protocols.</p>
+
+<p>Currently, NtkP supports RADIUS with PAP and CHAP authentication types.</p>
 
 <h1 id="technical-summary">Technical Summary</h1>
 
-<p>NtkCp consists of 2 components:</p>
+<p>NtkP manages a list of known IP addresses, which can send it requests. Each IP address
+has a corresponding secret. Each of these IP addresses correspond to one upstream client.</p>
 
-<ul>
-<li>a Windows COM component, which implements the <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/bb776042(v=vs.85).aspx">ICredentialProvider</a> and
-<a href="https://msdn.microsoft.com/en-us/library/windows/desktop/hh706912(v=vs.85).aspx">ICredentialProviderCredential2</a> interfaces.</li>
-<li>a Windows service, which communicates with the credential provider via named pipes,
-and with a Notakey API endpoint.</li>
-</ul>
+<p>NtkP also has one backing RADIUS server address and secret defined. This is the downstream RADIUS server.</p>
 
-<p>The credential provider provides a username and password input fields. The provided
-username is sent to the Notakey API, to request approval on the user&rsquo;s smartphone.</p>
+<p>When a RADIUS message is received, it will be transparently proxied to the downstream
+server. Each incoming message will be decoded with the matching upstream secret, and
+re-encoded with the downstream server&rsquo;s secret.</p>
 
-<p>If the username is not found (i.e. the user does not exist or has not been
-onboarded on the Notakey server), the login attempt will fail with a message.</p>
+<p>Each message returned by the downstream server will be similarly decoded and re-encoded,
+to match the secret expected by the upstream client.</p>
 
-<p>If the username is found, and the attempt is denied, the logon attempt will fail with an error.</p>
+<p>In addition, if the RADIUS message is an <code class="prettyprint">Access-Request</code> message, then
+the username contained in the message will be passed to Notakey API, and
+await verification. If the end-user denies this request on their smartphone, the response will be
+changed, before being returned to the upstream client.</p>
 
-<p>If the user approves the logon attempt, then the provided username and password are processed as
-they would normally. If the entered password is incorrect, then the logon attempt will
-fail with a message.</p>
+<p>While waiting for the user to respond on their smartphone, upstream clients may
+time out, and re-send the Access-Request message. In this case, the proxy will
+attempt to handle duplicate requests, based on packet ID values and corresponding
+usernames.</p>
 
-<h1 id="installation-instructions-zip">Installation instructions (*.zip)</h1>
-<pre class="highlight shell tab-shell"><code><span class="c"># The expected ZIP package contents</span>
-package.zip
-├── NotakeyBGService
-│   ├── winsw.exe
-│   ├── winsw.xml
-│   └── bin
-│       └── Release
-│           ├── <span class="k">*</span>.dll
-│           ├── <span class="k">*</span>.xml
-│           └── NotakeyBGService.exe
-├── NotakeyNETProvider
-│   └── bin
-│       └── x64
-│           └── Release
-│               ├── <span class="k">*</span>.dll
-│               └── <span class="k">*</span>.xml
-├── register.bat
-├── register.reg
-└── unregister.bat
-</code></pre>
-<p>Place the contents of the package in the desired location (e.g. <code class="prettyprint">C:\ntkcp</code>)
-and then run <code class="prettyprint">register.bat</code> as administrator.</p>
+<div style="page-break-inside:avoid;">
 
-<p>This script will create a new system service (<code class="prettyprint">Notakey BG Service</code>), and
-register the credential provider in the registry.</p>
+<h2>Flowchart</h2>
 
-<p>To remove the provider from the system, run <code class="prettyprint">unregister.bat</code> as the administrator.</p>
+<img src="images/proxy_flow.png" />
+<!-- ![Overview Flowchart](images/proxy_flow.png "Overview Flowchart") -->
 
-<aside class="notice">
-After running <code>register.bat</code>, be sure to make the service restart
-on failure. This will prevent the credential provider from becoming unusable, in
-case of an unexpected issue.
+<aside class="notice invisible-in-pdf">
+See <a href="images/proxy_flow.png">enlarged version</a>.
 </aside>
 
-<h2 id="32-bit-systems">32-bit systems</h2>
+</div>
 
-<p>On 32-bit systems, the package should contain a <code class="prettyprint">register32.bat</code> and <code class="prettyprint">unregister32.bat</code>
-file. These should be used to register the service and credential provider.</p>
+<h1 id="system-requirements">System Requirements</h1>
 
-<p>There are no other user-facing changes between 32-bit and 64-bit packages.</p>
+<h2 id="docker">Docker</h2>
 
-<h1 id="configuring-the-api-endpoint">Configuring the API endpoint</h1>
+<p>The recommended environment for NtkP is Docker, so any Docker-enabled host
+should be fine.</p>
 
-<p>After installation, the background service must be configured to connect
-to the desired Notakey API endpoint.</p>
+<h2 id="windows">Windows</h2>
 
-<p>This is done by modifying the <code class="prettyprint">NotakeyBGService\winsw.xml</code> file. This file should contain
-three argument tags:</p>
+<p>NtkP can alternatively be installed as a Windows system service. It has a dependency
+on .NET Framework v4.5.</p>
+
+<p>See: <a href="https://msdn.microsoft.com/en-us/library/8z6watww(v=vs.110).aspx">Microsoft .NET Framework v4.5 system requirements</a>.</p>
+
+<h1 id="installation-instructions-docker">Installation instructions (Docker)</h1>
+
+<p>The recommended way to obtain NtkP is by using Docker. It is published as the
+<code class="prettyprint">notakey/authproxy</code> image. Use the tag <code class="prettyprint">latest</code> to always use the latest version,
+or specify a specific version, using the tag.</p>
+<pre class="highlight shell tab-shell"><code><span class="c"># Download the latest version</span>
+<span class="gp">$ </span>docker pull notakey/authproxy:latest
+
+<span class="c"># Download a specific version</span>
+<span class="gp">$ </span>docker pull notakey/authproxy:1.0.0
+</code></pre>
+<p>The link to the Docker Hub page: <a href="https://hub.docker.com/r/notakey/authproxy/">Notakey Authentication Proxy on Docker Hub</a>.</p>
+
+<h1 id="installation-instructions-msi">Installation instructions (MSI)</h1>
+
+<aside class="notice">
+The use of the MSI package is discouraged, in favor of the Docker version. The MSI
+package will continue to be supported, however.
+</aside>
+
+<p>&hellip;</p>
+
+<h1 id="configuration">Configuration</h1>
+
+<h2 id="configuring-the-msi">Configuring the MSI</h2>
+
+<p>&hellip;</p>
+
+<h2 id="configuring-the-docker-image">Configuring the Docker image</h2>
+
+<p>Parameters to the Docker image are set via environment variables.</p>
 <pre class="highlight xml tab-xml"><code><span class="nt">&lt;argument&gt;</span>https://demo.notakey.com/api/<span class="nt">&lt;/argument&gt;</span>
 <span class="nt">&lt;argument&gt;</span>65af8d56-b7d9-49b9-86c6-595dc440d933<span class="nt">&lt;/argument&gt;</span>
 <span class="nt">&lt;argument&gt;</span>/unattended<span class="nt">&lt;/argument&gt;</span>
@@ -120,12 +146,18 @@ can be found in the Notakey dashboard, when viewing a specific application.</li>
 
 <h1 id="network-connectivity">Network Connectivity</h1>
 
-<p>The background service will attempt to connect to its specified Notakey endpoint.</p>
+<p>NtkP will communicate with its RADIUS clients and the downstream RADIUS server
+via one UDP port. This port can be different for clients and the downstream server,
+but it can not be different for different clients.</p>
 
-<p>If the endpoint URL uses <code class="prettyprint">https://</code>, then port <code class="prettyprint">443</code> will be used. Otherwise,
-the port <code class="prettyprint">80</code> will be used.</p>
+<p>Additionally, the TCP port 443 is required to be open between NtkP and the
+designated Notakey API endpoint.</p>
 
-<p>There are no expected inbound connections.</p>
+<p><img src="images/network_connectivity.png" title="Network Connectivity Chart" alt="Network Connectivity Chart" /></p>
+
+<aside class="notice invisible-in-pdf">
+See <a href="images/network_connectivity.png">enlarged version</a>.
+</aside>
 
 <h1 id="log-files">Log files</h1>
 
@@ -182,41 +214,31 @@ but not anymore.</p>
 
 <h1 id="faq">FAQ</h1>
 
-<h2 id="does-ntkcp-work-with-local-users-or-domain-users">Does NtkCp work with local users or domain users?</h2>
+<h2 id="does-ntkp-listen-on-only-one-port-are-accounting-messages-supported">Does NtkP listen on only one port? Are accounting messages supported?</h2>
 
-<p>NtkCp works with both local and domain users. The entered username
-must match the username that has been onboarded in the Notakey Dashboard.</p>
+<p>NtkP only listens to one port, and it expects authentication messages to be sent
+on this port.</p>
 
-<h2 id="can-ntkcp-be-used-in-an-environment-that-requires-smartcard-logon">Can NtkCp be used in an environment that requires smartcard logon?</h2>
+<p>Listening to accounting messages is not currently supported.</p>
 
-<p>No, NtkCp is a proxy for the normal username/password logon method.</p>
+<h2 id="what-are-the-implications-for-only-supporting-pap-and-chap-authentication-modes">What are the implications for only supporting PAP and CHAP authentication modes?</h2>
 
-<h2 id="cant-the-users-choose-a-different-credential-method-and-sidestep-notakey-authentication">Can&rsquo;t the users choose a different credential method, and sidestep Notakey authentication?</h2>
+<p>PAP and CHAP do not sufficiently protect user credentials from man-in-the-middle
+attacks.</p>
 
-<p>If other credential providers are enabled, the users will be able to use them
-and sidestep Notakey authentication.</p>
+<p>These authentication types may be deemed secure-enough for use on an internal network,
+where the risk for a MitM attack can be mitigated with other means.</p>
 
-<p>To mitigate this, you can disable other credential providers.</p>
+<aside class="warning">
+You should <em>never</em> use PAP and CHAP in an uncontrolled environment.
+</aside>
 
-<h2 id="can-users-use-safe-mode-to-sidestep-the-notakey-credential-provider">Can users use safe mode to sidestep the Notakey credential provider?</h2>
+<h2 id="why-does-ntkp-support-only-pap-and-chap">Why does NtkP support only PAP and CHAP?</h2>
 
-<p>Yes, in safe mode, the Notakey credential provider can be avoided. The system
-will fallback to the default system credential providers.</p>
+<p>PAP and CHAP are good enough for many use cases, so we have prioritized other tasks
+over implementing more authentication methods.</p>
 
-<h2 id="can-this-be-used-to-protect-remote-servers">Can this be used to protect remote servers?</h2>
-
-<p>NtkCp can be used together with Remote Desktop Protocol (RDP).</p>
-
-<h2 id="why-is-the-notakey-logon-option-missing-when-accessing-a-remote-server-via-rdp">Why is the Notakey logon option missing, when accessing a remote server via RDP?</h2>
-
-<p>If Network Level Authentication (NLA) is enabled, users will be prompted locally
-for either their smartcard, or their username/password credentials.</p>
-
-<p>This is by design and can not be changed.</p>
-
-<p>However, if other credential providers are disabled on the remote server, then
-after the initial authentication, a second logon UI will be presented, where
-the user will be able to use the Notakey credential provider.</p>
+<p>Implementing more authentication methods is on our roadmap, however.</p>
 
 </section>
 </body>
