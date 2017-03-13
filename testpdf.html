@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta content="IE=edge,chrome=1" http-equiv="X-UA-Compatible">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="date" content="2017-03-10T12:35:24EET">
+    <title>Notakey Credential Provider for Windows v.</title>
+    <meta name="pdfkit-footer_right" content="Page [page] of [topage]">
+    <meta name="pdfkit-footer_left" content="[title] | 2017-03-10">
+    <meta name="pdfkit-footer_font_size" content="8">
+    <link href="stylesheets/print.css" rel="stylesheet" media="all" />
+
+</head>
+
+<body class="pdf">
+
+<section class="titlePage">
+        <img src="images/logo.png" alt="Logo" />
+
+    <h1>Notakey Credential Provider for Windows</h1>
+
+    <footer>
+        <div>Version  </div>
+        <div>Date: 2017-03-10</div>
+    </footer>
+</section>
+
+<section class="content">
+    <p><img src="images/hero.png" title="Logon using RDP" alt="Windows login screenshot" /></p>
+
+<h1 id="introduction">Introduction</h1>
+
+<p>The Notakey Credential Provider (NtkCp) is a Windows plugin, which extends
+the logon UI with a new mechanism, which injects Notakey 2FA in the normal
+logon scenario.</p>
+
+<h1 id="technical-summary">Technical Summary</h1>
+
+<p>NtkCp consists of 2 components:</p>
+
+<ul>
+<li>a Windows COM component, which implements the <a href="https://msdn.microsoft.com/en-us/library/windows/desktop/bb776042(v=vs.85).aspx">ICredentialProvider</a> and
+<a href="https://msdn.microsoft.com/en-us/library/windows/desktop/hh706912(v=vs.85).aspx">ICredentialProviderCredential2</a> interfaces.</li>
+<li>a Windows service, which communicates with the credential provider via named pipes,
+and with a Notakey API endpoint.</li>
+</ul>
+
+<p>The credential provider provides a username and password input fields. The provided
+username is sent to the Notakey API, to request approval on the user&rsquo;s smartphone.</p>
+
+<p>If the username is not found (i.e. the user does not exist or has not been
+onboarded on the Notakey server), the login attempt will fail with a message.</p>
+
+<p>If the username is found, and the attempt is denied, the logon attempt will fail with an error.</p>
+
+<p>If the user approves the logon attempt, then the provided username and password are processed as
+they would normally. If the entered password is incorrect, then the logon attempt will
+fail with a message.</p>
+</section>
+
+
+</body>
+</html>
+
